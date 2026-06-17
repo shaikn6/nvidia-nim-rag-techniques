@@ -73,7 +73,7 @@ class TestBuildVectorStore:
             MockFAISS.from_documents.return_value = MagicMock()
             from src.core.vector_store import build_faiss_store
 
-            store = build_faiss_store(sample_docs, mock_embeddings)
+            build_faiss_store(sample_docs, mock_embeddings)
         MockFAISS.from_documents.assert_called_once_with(sample_docs, mock_embeddings)
 
     def test_build_pinecone_raises_without_package(self, sample_docs, mock_embeddings, monkeypatch):
