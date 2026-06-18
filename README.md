@@ -1,0 +1,90 @@
+# NVIDIA NIM RAG Techniques
+
+**Five production-grade RAG optimization techniques, powered by [NVIDIA NIM](https://www.nvidia.com/en-us/ai/) and orchestrated with LangChain / LangGraph.**
+
+Naive RAG — embed, retrieve top-k, stuff into the prompt — falls over on real corpora: keyword-heavy queries miss, embeddings surface near-duplicates, long contexts bury the answer, and the model has no recourse when retrieval is simply wrong. This repo implements the five techniques that fix each failure mode, each isolated, tested, and benchmarkable against a naive baseline.
+
+---
+
+## The Five Techniques
+
+| # | Technique | Problem it solves | Module |
+|---|-----------|-------------------|--------|
+| 1 | **Hybrid Search + RRF** | Dense embeddings miss exact terms (tickers, IDs, code) | `src/techniques/hybrid_search.py` |
+| 2 | **Cross-Encoder Reranking** | Top-k by cosine returns near-duplicates, not the best answer | `src/techniques/reranking.py` |
+| 3 | **Query Rewriting** (HyDE · Multi-Query · Step-Back) | Short/ambiguous queries retrieve poorly | `src/techniques/query_rewriting.py` |
+| 4 | **Context Compression** | Long contexts bury the signal and waste tokens | `src/techniques/compression.py` |
+| 5 | **Corrective RAG (CRAG)** | Retrieval is sometimes wrong with no fallback | `src/techniques/corrective_rag.py` |
+
+- **Hybrid Search** fuses BM25 (lexical) and dense vector scores via Reciprocal Rank Fusion.
+- **Reranking** scores each candidate against the query with a cross-encoder, then keeps the true top-k.
+- **Query Rewriting** generates a hypothetical answer (HyDE), multiple query variants, and a step-back abstraction.
+- **Compression** extracts only the query-relevant sentences before they reach the LLM.
+- **Corrective RAG** grades retrieved docs with a LangGraph state machine and falls back to web search (Tavily) when they're insufficient.
+
+---
+
+## Architecture
+
+```
+query
+  │
+  ├─ query_rewriting ──► expanded queries
+  │
+  ├─ hybrid_search (BM25 + dense → RRF) ──► candidates
+  │
+  ├─ reranking (cross-encoder) ──► top-k
+  │
+  ├─ compression (sentence extraction) ──► distilled context
+  │
+  └─ corrective_rag (grade → web fallback) ──► grounded answer
+```
+
+- **`src/core/`** — NVIDIA NIM LLM client (`llm.py`), embeddings (`embeddings.py`), FAISS/Pinecone vector store (`vector_store.py`)
+- **`src/techniques/`** — the five techniques, each behind a common interface
+- **`src/pipeline/`** — composable pipeline (`base.py`) and a benchmark harness (`benchmark.py`) that scores each technique against the naive baseline
+
+---
+
+## Quickstart
+
+```bash
+git clone https://github.com/shaikn6/nvidia-nim-rag-techniques
+cd nvidia-nim-rag-techniques
+
+python -m venv .venv && source .venv/bin/activate
+pip install -e ".[dev]"
+
+cp .env.example .env   # add your NVIDIA_NIM_API_KEY
+```
+
+```bash
+# Run the test suite (95%+ coverage gate)
+pytest --cov
+
+# Benchmark all five techniques vs. naive RAG
+python -m src.pipeline.benchmark
+```
+
+## Configuration
+
+| Variable | Required | Purpose |
+|----------|----------|---------|
+| `NVIDIA_NIM_API_KEY` | ✅ | NVIDIA NIM inference + embeddings |
+| `NVIDIA_NIM_BASE_URL` | ✅ | NIM endpoint (default `integrate.api.nvidia.com/v1`) |
+| `PINECONE_API_KEY` / `PINECONE_INDEX` | optional | Pinecone vector store (FAISS is default) |
+| `TAVILY_API_KEY` | optional | Web-search fallback for Corrective RAG |
+
+---
+
+## Tech Stack
+
+LangChain · LangGraph · NVIDIA NIM · FAISS · BM25 (rank-bm25) · sentence-transformers · Pydantic · pytest
+
+## Tests
+
+Every technique has an isolated test module under `tests/`, plus a benchmark test. CI runs lint (ruff) and the full suite with a 95% coverage gate.
+
+## License
+
+MIT
