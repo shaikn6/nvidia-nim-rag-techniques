@@ -1,5 +1,12 @@
 # NVIDIA NIM RAG Techniques
 
+[![CI](https://github.com/shaikn6/nvidia-nim-rag-techniques/actions/workflows/ci.yml/badge.svg)](https://github.com/shaikn6/nvidia-nim-rag-techniques/actions)
+[![Python](https://img.shields.io/badge/Python-3.11+-3776AB?logo=python&logoColor=white)](https://python.org)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+[![Lint: ruff](https://img.shields.io/badge/lint-ruff-261230?logo=ruff)](https://github.com/astral-sh/ruff)
+[![Coverage](https://img.shields.io/badge/coverage-95%25+-brightgreen.svg)](#tests)
+
+
 **Five production-grade RAG optimization techniques, powered by [NVIDIA NIM](https://www.nvidia.com/en-us/ai/) and orchestrated with LangChain / LangGraph.**
 
 Naive RAG — embed, retrieve top-k, stuff into the prompt — falls over on real corpora: keyword-heavy queries miss, embeddings surface near-duplicates, long contexts bury the answer, and the model has no recourse when retrieval is simply wrong. This repo implements the five techniques that fix each failure mode, each isolated, tested, and benchmarkable against a naive baseline.
