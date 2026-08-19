@@ -10,12 +10,15 @@ Grades each retrieved doc; if all fail relevance, falls back to web search
 
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass, field
-from typing import Any, Literal
+from typing import Any, Literal, TypedDict
 
 from langchain_core.documents import Document
 from langchain_core.language_models import BaseChatModel
 from langchain_core.vectorstores import VectorStore
+
+logger = logging.getLogger(__name__)
 
 _GRADE_PROMPT = (
     "Is the following document relevant to the question?\n\n"
@@ -60,6 +63,7 @@ def _web_search(query: str) -> list[Document]:
             if isinstance(r, dict) and "content" in r
         ]
     except Exception:
+        logger.exception("Web search fallback failed for query: %r", query)
         return []
 
 
@@ -107,6 +111,14 @@ def run_corrective_rag(
     }
 
 
+class GraphState(TypedDict):
+    query: str
+    documents: list[Document]
+    graded: list[tuple[Document, bool]]
+    used_web: bool
+    answer: str
+
+
 def build_crag_graph(
     vector_store: VectorStore,
     llm: BaseChatModel,
@@ -118,32 +130,23 @@ def build_crag_graph(
     except ImportError as exc:
         raise ImportError("pip install langgraph") from exc
 
-    from typing import TypedDict
-
-    class GraphState(TypedDict):
-        query: str
-        documents: list[Document]
-        graded: list[tuple[Document, bool]]
-        used_web: bool
-        answer: str
-
-    def retrieve_node(state: GraphState) -> GraphState:  # pragma: no cover
+    def retrieve_node(state: GraphState) -> GraphState:
         docs = vector_store.similarity_search(state["query"], k=top_k)
         return {**state, "documents": docs}
 
-    def grade_node(state: GraphState) -> GraphState:  # pragma: no cover
+    def grade_node(state: GraphState) -> GraphState:
         graded = [(d, _grade_document(state["query"], d, llm)) for d in state["documents"]]
         return {**state, "graded": graded}
 
-    def route_node(state: GraphState) -> Literal["generate", "web_search"]:  # pragma: no cover
+    def route_node(state: GraphState) -> Literal["generate", "web_search"]:
         ok_ratio = sum(1 for _, ok in state["graded"] if ok) / max(len(state["graded"]), 1)
         return "generate" if ok_ratio >= 0.5 else "web_search"
 
-    def web_search_node(state: GraphState) -> GraphState:  # pragma: no cover
+    def web_search_node(state: GraphState) -> GraphState:
         docs = _web_search(state["query"]) or state["documents"]
         return {**state, "documents": docs, "used_web": True}
 
-    def generate_node(state: GraphState) -> GraphState:  # pragma: no cover
+    def generate_node(state: GraphState) -> GraphState:
         relevant = [d for d, ok in state.get("graded", []) if ok] or state["documents"]
         context = "\n\n".join(d.page_content for d in relevant)
         ans = llm.invoke(_GENERATE_PROMPT.format(context=context, query=state["query"])).content

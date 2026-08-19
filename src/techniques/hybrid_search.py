@@ -22,17 +22,22 @@ class HybridSearchResult:
     rrf_score: float
 
 
+def _doc_key(doc: Document) -> tuple[Any, str]:
+    """Stable document identity for fusion/lookup: (source metadata, page_content)."""
+    return (doc.metadata.get("source"), doc.page_content)
+
+
 def reciprocal_rank_fusion(
     ranked_lists: list[list[Document]],
     k: int = 60,
 ) -> list[tuple[Document, float]]:
     """Merge N ranked lists via RRF. Higher score = better."""
-    scores: dict[str, float] = {}
-    doc_map: dict[str, Document] = {}
+    scores: dict[tuple[Any, str], float] = {}
+    doc_map: dict[tuple[Any, str], Document] = {}
 
     for ranked in ranked_lists:
         for rank, doc in enumerate(ranked, start=1):
-            doc_id = doc.page_content
+            doc_id = _doc_key(doc)
             scores[doc_id] = scores.get(doc_id, 0.0) + 1.0 / (k + rank)
             doc_map[doc_id] = doc
 
@@ -77,14 +82,14 @@ class HybridRetriever:
 
         fused = reciprocal_rank_fusion([dense_docs, sparse_ranked], k=self._rrf_k)
 
-        dense_index = {doc.page_content: rank for rank, doc in enumerate(dense_docs)}
-        sparse_index = {doc.page_content: rank for rank, doc in enumerate(sparse_ranked)}
+        dense_index = {_doc_key(doc): rank for rank, doc in enumerate(dense_docs)}
+        sparse_index = {_doc_key(doc): rank for rank, doc in enumerate(sparse_ranked)}
 
         return [
             HybridSearchResult(
                 document=doc,
-                dense_rank=dense_index.get(doc.page_content),
-                sparse_rank=sparse_index.get(doc.page_content),
+                dense_rank=dense_index.get(_doc_key(doc)),
+                sparse_rank=sparse_index.get(_doc_key(doc)),
                 rrf_score=score,
             )
             for doc, score in fused[: self._top_k]

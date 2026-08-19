@@ -61,6 +61,17 @@ class TestWebSearch:
             result = _web_search("query")
         assert result == []
 
+    def test_logs_before_returning_empty_on_exception(self, monkeypatch, caplog):
+        monkeypatch.setenv("TAVILY_API_KEY", "fake-key")
+        with patch(
+            "langchain_community.tools.TavilySearchResults",
+            side_effect=RuntimeError("tavily down"),
+        ):
+            with caplog.at_level("ERROR", logger="src.techniques.corrective_rag"):
+                result = _web_search("query")
+        assert result == []
+        assert "Web search fallback failed" in caplog.text
+
     def test_returns_documents_when_tavily_available(self, monkeypatch):
         monkeypatch.setenv("TAVILY_API_KEY", "fake-key")
         mock_tool = MagicMock()
@@ -140,3 +151,49 @@ class TestBuildCragGraph:
 
             with pytest.raises(ImportError, match="langgraph"):
                 build_crag_graph(mock_vector_store, relevant_llm)
+
+    def _initial_state(self, query: str) -> dict:
+        return {"query": query, "documents": [], "graded": [], "used_web": False, "answer": ""}
+
+    def test_graph_runs_generate_path_when_docs_relevant(self, sample_docs):
+        from src.techniques.corrective_rag import build_crag_graph
+
+        vector_store = MagicMock()
+        vector_store.similarity_search.return_value = sample_docs[:2]
+
+        llm = MagicMock()
+        llm.invoke.side_effect = [
+            MagicMock(content="yes"),
+            MagicMock(content="yes"),
+            MagicMock(content="Grounded answer."),
+        ]
+
+        graph = build_crag_graph(vector_store, llm, top_k=2)
+        result = graph.invoke(self._initial_state("what is NIM?"))
+
+        assert result["answer"] == "Grounded answer."
+        assert result["used_web"] is False
+        assert result["documents"] == sample_docs[:2]
+        assert all(ok for _, ok in result["graded"])
+
+    def test_graph_runs_web_search_path_when_docs_irrelevant(self, sample_docs):
+        from src.techniques.corrective_rag import build_crag_graph
+
+        vector_store = MagicMock()
+        vector_store.similarity_search.return_value = sample_docs[:2]
+
+        llm = MagicMock()
+        llm.invoke.side_effect = [
+            MagicMock(content="no"),
+            MagicMock(content="no"),
+            MagicMock(content="Web-grounded answer."),
+        ]
+
+        web_doc = Document(page_content="fresh web result", metadata={"source": "web"})
+        graph = build_crag_graph(vector_store, llm, top_k=2)
+        with patch("src.techniques.corrective_rag._web_search", return_value=[web_doc]):
+            result = graph.invoke(self._initial_state("obscure query"))
+
+        assert result["answer"] == "Web-grounded answer."
+        assert result["used_web"] is True
+        assert result["documents"] == [web_doc]

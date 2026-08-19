@@ -5,6 +5,7 @@ from __future__ import annotations
 from unittest.mock import MagicMock, patch
 
 import pytest
+from langchain_core.documents import Document
 
 from src.techniques.hybrid_search import (
     HybridSearchResult,
@@ -44,6 +45,14 @@ class TestRRF:
         result = reciprocal_rank_fusion([sample_docs, sample_docs])
         contents = [d.page_content for d, _ in result]
         assert len(contents) == len(set(contents))
+
+    def test_same_content_different_source_not_collapsed(self):
+        doc_a = Document(page_content="shared text", metadata={"source": "doc-a"})
+        doc_b = Document(page_content="shared text", metadata={"source": "doc-b"})
+        result = reciprocal_rank_fusion([[doc_a], [doc_b]])
+        sources = {d.metadata["source"] for d, _ in result}
+        assert sources == {"doc-a", "doc-b"}
+        assert len(result) == 2
 
 
 class TestHybridRetriever:
