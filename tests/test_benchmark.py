@@ -2,11 +2,14 @@
 
 from __future__ import annotations
 
+import os
+from unittest.mock import patch
 
 import pytest
 
 from src.pipeline.base import BaseRAGPipeline
-from src.pipeline.benchmark import run_benchmark
+from src.pipeline.benchmark import _build_llm_and_embeddings, _run_demo, run_benchmark
+from src.pipeline.pipelines import DemoEmbeddings, DemoLLM
 
 
 class MockPipeline(BaseRAGPipeline):
@@ -92,3 +95,36 @@ class TestBaseRAGPipeline:
         p = MockPipeline("test")
         assert p.name == "test"
         assert "answer" in p.run("query")
+
+
+class TestBuildLlmAndEmbeddings:
+    def test_no_api_key_returns_demo_stand_ins(self):
+        with patch.dict(os.environ, {}, clear=True):
+            llm, embeddings = _build_llm_and_embeddings()
+        assert isinstance(llm, DemoLLM)
+        assert isinstance(embeddings, DemoEmbeddings)
+
+    def test_placeholder_api_key_returns_demo_stand_ins(self):
+        with patch.dict(os.environ, {"NVIDIA_NIM_API_KEY": "nvapi-xxxxxxxxxxxxxxxxxxxx"}, clear=True):
+            llm, embeddings = _build_llm_and_embeddings()
+        assert isinstance(llm, DemoLLM)
+        assert isinstance(embeddings, DemoEmbeddings)
+
+    def test_real_api_key_builds_nim_clients(self):
+        with patch.dict(os.environ, {"NVIDIA_NIM_API_KEY": "nvapi-real-key"}, clear=True):
+            llm, embeddings = _build_llm_and_embeddings()
+        assert not isinstance(llm, DemoLLM)
+        assert not isinstance(embeddings, DemoEmbeddings)
+
+
+class TestRunDemo:
+    def test_run_demo_prints_summary_for_all_six_pipelines(self, capsys):
+        with patch.dict(os.environ, {}, clear=True):
+            _run_demo()
+        out = capsys.readouterr().out
+        assert "naive_baseline" in out
+        assert "hybrid_search" in out
+        assert "reranking" in out
+        assert "query_rewriting_hyde" in out
+        assert "compression" in out
+        assert "corrective_rag" in out

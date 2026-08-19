@@ -70,3 +70,68 @@ def run_benchmark(
             )
 
     return report
+
+
+def _build_llm_and_embeddings() -> tuple[Any, Any]:
+    """Real NIM clients when NVIDIA_NIM_API_KEY is configured, offline demo stand-ins otherwise."""
+    import os
+
+    from src.pipeline.pipelines import DemoEmbeddings, DemoLLM
+
+    api_key = os.environ.get("NVIDIA_NIM_API_KEY")
+    if api_key and api_key != "nvapi-xxxxxxxxxxxxxxxxxxxx":
+        from src.core.embeddings import build_nim_embeddings
+        from src.core.llm import build_nim_llm
+
+        return build_nim_llm(), build_nim_embeddings()
+
+    return DemoLLM(), DemoEmbeddings()
+
+
+def _run_demo() -> None:
+    """Benchmark all 5 techniques against the naive baseline on a small bundled corpus."""
+    from src.core.vector_store import build_faiss_store
+    from src.pipeline.demo_data import DEMO_CORPUS, DEMO_QUERIES
+    from src.pipeline.pipelines import (
+        CompressionPipeline,
+        CorrectiveRAGPipeline,
+        DemoReranker,
+        HybridSearchPipeline,
+        NaiveRAGPipeline,
+        QueryRewritingPipeline,
+        RerankingPipeline,
+    )
+    from src.techniques.compression import build_embeddings_filter_retriever
+    from src.techniques.hybrid_search import HybridRetriever
+    from src.techniques.reranking import RerankerRetriever
+
+    llm, embeddings = _build_llm_and_embeddings()
+    vector_store = build_faiss_store(DEMO_CORPUS, embeddings)
+
+    hybrid_retriever = HybridRetriever(vector_store, DEMO_CORPUS)
+    reranker = DemoReranker()
+    rerank_retriever = RerankerRetriever(vector_store, reranker)
+    compression_retriever = build_embeddings_filter_retriever(vector_store, embeddings)
+
+    pipelines: list[BaseRAGPipeline] = [
+        NaiveRAGPipeline(vector_store, llm),
+        HybridSearchPipeline(hybrid_retriever, llm),
+        RerankingPipeline(rerank_retriever, llm),
+        QueryRewritingPipeline("hyde", llm, vector_store, embeddings),
+        CompressionPipeline(compression_retriever, llm),
+        CorrectiveRAGPipeline(vector_store, llm),
+    ]
+
+    report = run_benchmark(pipelines, DEMO_QUERIES)
+
+    print(f"Benchmark: {len(pipelines)} pipelines x {len(DEMO_QUERIES)} queries\n")
+    summary = report.summary()
+    for name, stats in summary.items():
+        print(
+            f"{name:>24}  avg_latency_ms={stats['avg_latency_ms']:.2f}  "
+            f"error_rate={stats['error_rate']:.2f}  query_count={stats['query_count']}"
+        )
+
+
+if __name__ == "__main__":
+    _run_demo()
