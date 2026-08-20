@@ -26,7 +26,7 @@ Naive RAG — embed, retrieve top-k, stuff into the prompt — falls over on rea
 - **Hybrid Search** fuses BM25 (lexical) and dense vector scores via Reciprocal Rank Fusion.
 - **Reranking** scores each candidate against the query with a cross-encoder, then keeps the true top-k.
 - **Query Rewriting** generates a hypothetical answer (HyDE), multiple query variants, and a step-back abstraction.
-- **Compression** extracts only the query-relevant sentences before they reach the LLM.
+- **Compression** extracts only the query-relevant sentences before they reach the LLM, either via an LLM extraction call or an embedding-similarity filter (no LLM call).
 - **Corrective RAG** grades retrieved docs with a LangGraph state machine and falls back to web search (Tavily) when they're insufficient.
 
 ---
@@ -145,7 +145,7 @@ python -m src.pipeline.benchmark
 | Variable | Required | Purpose |
 |----------|----------|---------|
 | `NVIDIA_NIM_API_KEY` | ✅ | NVIDIA NIM inference + embeddings |
-| `NVIDIA_NIM_BASE_URL` | ✅ | NIM endpoint (default `integrate.api.nvidia.com/v1`) |
+| `NVIDIA_NIM_BASE_URL` | optional | NIM endpoint (default `integrate.api.nvidia.com/v1`) |
 | `PINECONE_API_KEY` / `PINECONE_INDEX` | optional | Pinecone vector store (FAISS is default) |
 | `TAVILY_API_KEY` | optional | Web-search fallback for Corrective RAG |
 
