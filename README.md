@@ -135,6 +135,11 @@ pytest --cov
 python -m src.pipeline.benchmark
 ```
 
+> **macOS:** if `pytest` crashes with `Fatal Python error: Aborted` while
+> importing `torch`/`sentence-transformers`, that's a duplicate-OpenMP-runtime
+> conflict between `faiss-cpu` and `torch`, not a repo issue. Work around it
+> with `KMP_DUPLICATE_LIB_OK=TRUE pytest --cov`. CI (Ubuntu) is unaffected.
+
 ## Configuration
 
 | Variable | Required | Purpose |
