@@ -12,6 +12,7 @@ Includes:
 
 from __future__ import annotations
 
+import hashlib
 import math
 from types import SimpleNamespace
 from typing import Any
@@ -217,7 +218,9 @@ class DemoEmbeddings(Embeddings):
     def _vec(self, text: str) -> list[float]:
         vec = [0.0] * self._DIM
         for word in text.lower().split():
-            vec[hash(word) % self._DIM] += 1.0
+            # sha256, not hash(): str hashing is salted per process (PYTHONHASHSEED).
+            digest = hashlib.sha256(word.encode()).digest()
+            vec[int.from_bytes(digest[:8], "big") % self._DIM] += 1.0
         norm = math.sqrt(sum(v * v for v in vec)) or 1.0
         return [v / norm for v in vec]
 

@@ -33,9 +33,11 @@ Naive RAG — embed, retrieve top-k, stuff into the prompt — falls over on rea
 
 ## Architecture
 
-The five techniques compose into a single retrieve → refine → ground flow. Each
-stage is independently testable and can be benchmarked in isolation against the
-naive baseline.
+The diagram below is an illustrative retrieve → refine → ground flow showing where
+each technique sits. It is not a single shipped pipeline: the benchmark runs six
+separate pipelines (the naive baseline plus one adapter per technique, with query
+rewriting represented by HyDE), and no pipeline chains all five stages. Each stage is
+independently testable and can be timed in isolation against the naive baseline.
 
 ```mermaid
 flowchart TD
@@ -66,7 +68,7 @@ flowchart TD
 
 - **`src/core/`** — NVIDIA NIM LLM client (`llm.py`), embeddings (`embeddings.py`), FAISS/Pinecone vector store (`vector_store.py`)
 - **`src/techniques/`** — the five techniques, each behind a common interface
-- **`src/pipeline/`** — composable pipeline (`base.py`) and a benchmark harness (`benchmark.py`) that scores each technique against the naive baseline
+- **`src/pipeline/`** — composable pipeline (`base.py`) and a benchmark harness (`benchmark.py`) that times each technique against the naive baseline
 
 ### How it works
 
@@ -82,9 +84,12 @@ flowchart TD
 - **Benchmark methodology.** `run_benchmark` runs each pipeline over a shared
   query set, capturing per-run latency (`time.perf_counter`) and exceptions;
   `BenchmarkReport.summary()` aggregates `avg_latency_ms`, `error_rate`, and
-  `query_count` per technique so any optimization is measured against the naive
-  baseline rather than asserted. Absolute numbers depend on your NIM endpoint,
-  corpus, and query set — run it on yours.
+  `query_count` per technique, so latency and failure rate are measured against the
+  naive baseline rather than asserted. The benchmark does **not** measure retrieval
+  or answer quality: there is no recall@k, MRR, or answer-correctness metric, so the
+  quality benefits described above are the techniques' design rationale, not
+  something this repo's benchmark demonstrates. Absolute numbers depend on your NIM
+  endpoint, corpus, and query set — run it on yours.
 
 ### Example output
 
@@ -131,7 +136,7 @@ cp .env.example .env   # add your NVIDIA_NIM_API_KEY
 # Run the test suite (95%+ coverage gate)
 pytest --cov
 
-# Benchmark all five techniques vs. naive RAG
+# Benchmark latency and error rate of the naive baseline and the five techniques
 python -m src.pipeline.benchmark
 ```
 

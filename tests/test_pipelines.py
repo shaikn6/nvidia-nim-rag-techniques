@@ -2,6 +2,10 @@
 
 from __future__ import annotations
 
+import os
+import subprocess
+import sys
+
 import pytest
 from langchain_core.documents import Document
 
@@ -191,6 +195,29 @@ class TestDemoEmbeddings:
         emb = DemoEmbeddings()
         vec = emb.embed_query("")
         assert vec == [0.0] * 64
+
+    def test_same_text_embeds_identically_across_instances(self):
+        text = "reciprocal rank fusion merges rankings"
+        assert DemoEmbeddings().embed_query(text) == DemoEmbeddings().embed_query(text)
+
+    def test_embedding_is_stable_across_processes(self):
+        # str hash() is salted per process, so two interpreters with different
+        # PYTHONHASHSEED values would disagree if the embedding relied on it.
+        code = (
+            "from src.pipeline.pipelines import DemoEmbeddings;"
+            "print(DemoEmbeddings().embed_query('reciprocal rank fusion'))"
+        )
+        outputs = {
+            subprocess.run(
+                [sys.executable, "-c", code],
+                env={**os.environ, "PYTHONHASHSEED": seed},
+                capture_output=True,
+                text=True,
+                check=True,
+            ).stdout
+            for seed in ("1", "2")
+        }
+        assert len(outputs) == 1
 
 
 class TestDemoReranker:
