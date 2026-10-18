@@ -85,10 +85,10 @@ flowchart TD
   query set, capturing per-run latency (`time.perf_counter`) and exceptions;
   `BenchmarkReport.summary()` aggregates `avg_latency_ms`, `error_rate`, and
   `query_count` per technique, so latency and failure rate are measured against the
-  naive baseline rather than asserted. The benchmark does **not** measure retrieval
-  or answer quality: there is no recall@k, MRR, or answer-correctness metric, so the
-  quality benefits described above are the techniques' design rationale, not
-  something this repo's benchmark demonstrates. Absolute numbers depend on your NIM
+  naive baseline rather than asserted. This latency benchmark does **not** measure
+  retrieval or answer quality; retrieval quality (recall@k, MRR) is measured separately
+  on a small labeled set, see [Retrieval quality](#retrieval-quality) below. There is
+  still no answer-correctness metric. Absolute latency numbers depend on your NIM
   endpoint, corpus, and query set — run it on yours.
 
 ### Example output
@@ -120,6 +120,52 @@ mean something.
 
 ---
 
+## Retrieval quality
+
+`src/pipeline/retrieval_eval.py` scores each pipeline's ranked `sources` against labeled
+relevance judgments (recall@k, MRR@5). It uses real local models, no NIM key needed:
+`BAAI/bge-small-en-v1.5` embeddings and the repo's default `BAAI/bge-reranker-v2-m3`
+cross-encoder. Generation is a no-op stub; only retrieval is scored.
+
+**Data:** `eval/data/tiny_ir.json`, 48 short technical passages in 12 topic clusters
+(four passages per topic, so each cluster holds hard negatives) and 28 queries with gold
+passage ids (2 queries have two gold passages). 13 queries are `lexical` (share distinctive
+terms with the gold passage), 15 are `paraphrase` (same fact, different words). It was
+authored for this repo (MIT); each query was written from its gold passage and the labels
+were fixed before any pipeline was run.
+
+```bash
+python -m src.pipeline.retrieval_eval   # writes eval/retrieval_results.json
+```
+
+Measured (28 queries, k = number of returned passages considered):
+
+| Pipeline | recall@1 | recall@3 | recall@5 | MRR@5 |
+|----------|---------:|---------:|---------:|------:|
+| naive baseline (dense) | 0.857 | 1.000 | 1.000 | 0.946 |
+| hybrid search (BM25 + dense, RRF) | 0.893 | 0.946 | 1.000 | 0.955 |
+| cross-encoder reranking | 0.964 | 1.000 | 1.000 | 1.000 |
+| compression (embeddings filter) | 0.857 | 1.000 | 1.000 | 0.946 |
+
+Reading it honestly:
+
+- **This set is tiny and easy.** Dense retrieval already finds every gold passage in the
+  top 3, so differences are a handful of queries at rank 1-3, not statistically meaningful.
+  recall@1 tops out at 0.964 because two queries have two gold passages.
+- **Reranking** put the gold passage first on every query that has one gold passage.
+  Its edge is on the `paraphrase` queries (recall@1 0.933 vs 0.733 for dense).
+- **Hybrid search** helped recall@1 slightly (0.893 vs 0.857) but lost on recall@3
+  (0.946 vs 1.000): on two paraphrase queries BM25 pushed a gold passage down to rank 4-5.
+  On `lexical` queries every pipeline is already at 1.000. The BM25 tokenizer here is
+  `lower().split()`, so punctuation stays attached to words.
+- **Compression** does not change which passages are retrieved or their order, so its
+  ranking metrics equal the naive baseline by construction; its benefit is shorter context.
+- **Not measured:** `query_rewriting_*` (HyDE, multi-query, step-back) and `corrective_rag`
+  need a real LLM (and Tavily for the CRAG fallback), so they are skipped rather than scored
+  with a stub. Per-query-type breakdowns are in `eval/retrieval_results.json`.
+
+---
+
 ## Quickstart
 
 ```bash
@@ -138,6 +184,9 @@ pytest --cov
 
 # Benchmark latency and error rate of the naive baseline and the five techniques
 python -m src.pipeline.benchmark
+
+# Measure retrieval quality (recall@k, MRR) with local embedding + reranker models
+python -m src.pipeline.retrieval_eval
 ```
 
 > **macOS:** if `pytest` crashes with `Fatal Python error: Aborted` while
@@ -162,7 +211,7 @@ LangChain · LangGraph · NVIDIA NIM · FAISS · BM25 (rank-bm25) · sentence-tr
 
 ## Tests
 
-Every technique has an isolated test module under `tests/`, plus a benchmark test — 127 tests, 99% coverage locally (`pytest --cov`). CI runs lint (ruff) and the full suite with a 95% coverage gate.
+Every technique has an isolated test module under `tests/`, plus a benchmark test — 135 tests, 99% coverage locally (`pytest --cov`). CI runs lint (ruff) and the full suite with a 95% coverage gate.
 
 ## License
 

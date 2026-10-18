@@ -1,0 +1,107 @@
+{
+  "num_passages": 48,
+  "num_queries": 28,
+  "pipelines": {
+    "naive_baseline": {
+      "recall@1": 0.8571,
+      "recall@3": 1.0,
+      "recall@5": 1.0,
+      "mrr": 0.9464,
+      "by_query_type": {
+        "lexical": {
+          "recall@1": 1.0,
+          "recall@3": 1.0,
+          "recall@5": 1.0,
+          "mrr": 1.0,
+          "num_queries": 13
+        },
+        "paraphrase": {
+          "recall@1": 0.7333,
+          "recall@3": 1.0,
+          "recall@5": 1.0,
+          "mrr": 0.9,
+          "num_queries": 15
+        }
+      }
+    },
+    "hybrid_search": {
+      "recall@1": 0.8929,
+      "recall@3": 0.9464,
+      "recall@5": 1.0,
+      "mrr": 0.9554,
+      "by_query_type": {
+        "lexical": {
+          "recall@1": 1.0,
+          "recall@3": 1.0,
+          "recall@5": 1.0,
+          "mrr": 1.0,
+          "num_queries": 13
+        },
+        "paraphrase": {
+          "recall@1": 0.8,
+          "recall@3": 0.9,
+          "recall@5": 1.0,
+          "mrr": 0.9167,
+          "num_queries": 15
+        }
+      }
+    },
+    "reranking": {
+      "recall@1": 0.9643,
+      "recall@3": 1.0,
+      "recall@5": 1.0,
+      "mrr": 1.0,
+      "by_query_type": {
+        "lexical": {
+          "recall@1": 1.0,
+          "recall@3": 1.0,
+          "recall@5": 1.0,
+          "mrr": 1.0,
+          "num_queries": 13
+        },
+        "paraphrase": {
+          "recall@1": 0.9333,
+          "recall@3": 1.0,
+          "recall@5": 1.0,
+          "mrr": 1.0,
+          "num_queries": 15
+        }
+      }
+    },
+    "compression": {
+      "recall@1": 0.8571,
+      "recall@3": 1.0,
+      "recall@5": 1.0,
+      "mrr": 0.9464,
+      "by_query_type": {
+        "lexical": {
+          "recall@1": 1.0,
+          "recall@3": 1.0,
+          "recall@5": 1.0,
+          "mrr": 1.0,
+          "num_queries": 13
+        },
+        "paraphrase": {
+          "recall@1": 0.7333,
+          "recall@3": 1.0,
+          "recall@5": 1.0,
+          "mrr": 0.9,
+          "num_queries": 15
+        }
+      }
+    }
+  },
+  "skipped": {
+    "query_rewriting_hyde": "HyDE retrieves with an LLM-written hypothetical answer; needs a real LLM.",
+    "query_rewriting_multi_query": "Retrieves with LLM-generated query variants; needs a real LLM.",
+    "query_rewriting_step_back": "Retrieves with an LLM-generated step-back question; needs a real LLM.",
+    "corrective_rag": "LLM grades retrieved docs and falls back to Tavily web search (not a corpus ranking)."
+  },
+  "dataset": "eval/data/tiny_ir.json",
+  "models": {
+    "embeddings": "BAAI/bge-small-en-v1.5",
+    "reranker": "BAAI/bge-reranker-v2-m3",
+    "sentence_transformers": "6.1.0",
+    "python": "3.12.12"
+  }
+}
