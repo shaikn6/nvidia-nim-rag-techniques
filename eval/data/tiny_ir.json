@@ -1,0 +1,428 @@
+{
+  "name": "tiny_ir",
+  "description": "Hand-authored labeled retrieval set: 48 short technical passages in 12 topic clusters (4 near-duplicate-topic passages each) and 28 queries with gold passage ids (qrels). Authored for this repo; labels are by construction.",
+  "notes": "Each query was written from its gold passage(s); relevance labels are by construction and were fixed before any pipeline was run. Query type 'lexical' = shares distinctive terms with the gold passage; 'paraphrase' = same fact, different words. The 4 passages in each topic cluster act as hard negatives for each other.",
+  "license": "MIT (same as this repository)",
+  "corpus": [
+    {
+      "id": "d01",
+      "text": "VACUUM in PostgreSQL reclaims storage occupied by dead tuples left behind by updates and deletes. Autovacuum runs it in the background based on table churn thresholds."
+    },
+    {
+      "id": "d02",
+      "text": "A B-tree index in PostgreSQL speeds up equality and range lookups on a column, at the cost of extra writes on every insert and update."
+    },
+    {
+      "id": "d03",
+      "text": "PostgreSQL write-ahead logging records every change to a log before it is applied to data files, which allows crash recovery by replaying the log."
+    },
+    {
+      "id": "d04",
+      "text": "EXPLAIN ANALYZE executes a PostgreSQL query and reports the actual row counts and timing of each plan node, unlike plain EXPLAIN which only shows estimates."
+    },
+    {
+      "id": "d05",
+      "text": "A Kubernetes Deployment manages a set of identical pods and performs rolling updates, replacing old pods gradually so the service stays available."
+    },
+    {
+      "id": "d06",
+      "text": "A Kubernetes Service gives a stable virtual IP and DNS name to a changing set of pods selected by labels."
+    },
+    {
+      "id": "d07",
+      "text": "The kubelet is the agent on each node that makes sure the containers described in pod specs are running and healthy."
+    },
+    {
+      "id": "d08",
+      "text": "A Kubernetes liveness probe tells the kubelet when to restart a container that has stopped responding, while a readiness probe controls whether it receives traffic."
+    },
+    {
+      "id": "d09",
+      "text": "git rebase replays commits from one branch onto another tip, producing a linear history, but it rewrites commit hashes."
+    },
+    {
+      "id": "d10",
+      "text": "git bisect performs a binary search through commit history to find the commit that introduced a bug."
+    },
+    {
+      "id": "d11",
+      "text": "git stash temporarily shelves uncommitted changes so the working directory is clean, and they can be reapplied later."
+    },
+    {
+      "id": "d12",
+      "text": "git cherry-pick applies the changes introduced by one specific existing commit onto the current branch as a new commit."
+    },
+    {
+      "id": "d13",
+      "text": "The TCP three-way handshake uses SYN, SYN-ACK and ACK segments to establish a connection before data is sent."
+    },
+    {
+      "id": "d14",
+      "text": "UDP is a connectionless transport protocol with no delivery guarantee or retransmission, so it suits low-latency traffic such as DNS lookups and live video."
+    },
+    {
+      "id": "d15",
+      "text": "DNS resolves a hostname such as example.com into an IP address by querying a recursive resolver, which walks root, TLD and authoritative servers."
+    },
+    {
+      "id": "d16",
+      "text": "TLS 1.3 reduces connection setup to one round trip and removes legacy cipher suites such as RSA key exchange."
+    },
+    {
+      "id": "d17",
+      "text": "The Python GIL, or global interpreter lock, lets only one thread execute Python bytecode at a time in CPython, so CPU-bound threads do not run in parallel."
+    },
+    {
+      "id": "d18",
+      "text": "A Python generator uses the yield keyword to produce values lazily one at a time, avoiding the need to hold a full sequence in memory."
+    },
+    {
+      "id": "d19",
+      "text": "Python decorators are functions that wrap another function to add behavior, applied with the @ syntax above the definition."
+    },
+    {
+      "id": "d20",
+      "text": "The asyncio library runs coroutines on a single-threaded event loop and suits I/O-bound workloads such as many concurrent network calls."
+    },
+    {
+      "id": "d21",
+      "text": "A Dockerfile multi-stage build compiles code in one stage and copies only the artifacts into a slim final image, shrinking the image size."
+    },
+    {
+      "id": "d22",
+      "text": "Docker volumes persist data outside a container's writable layer, so the data survives when the container is removed."
+    },
+    {
+      "id": "d23",
+      "text": "Docker Compose describes a multi-container application in a YAML file and starts every service with a single command."
+    },
+    {
+      "id": "d24",
+      "text": "Docker layer caching reuses unchanged image layers on rebuild, so ordering rarely-changing instructions first speeds up builds."
+    },
+    {
+      "id": "d25",
+      "text": "HTTP status 429 Too Many Requests tells a client it has exceeded a rate limit; the Retry-After header may say when to try again."
+    },
+    {
+      "id": "d26",
+      "text": "HTTP status 404 Not Found means the server cannot find the requested resource at the given URL."
+    },
+    {
+      "id": "d27",
+      "text": "HTTP status 503 Service Unavailable indicates the server is temporarily overloaded or down for maintenance."
+    },
+    {
+      "id": "d28",
+      "text": "An idempotent HTTP method such as PUT or DELETE can be repeated with the same effect as a single call, which makes retries safe."
+    },
+    {
+      "id": "d29",
+      "text": "Overfitting happens when a model memorizes noise in the training data and performs much worse on unseen data; regularization and early stopping reduce it."
+    },
+    {
+      "id": "d30",
+      "text": "Precision is the fraction of predicted positives that are truly positive, while recall is the fraction of actual positives that the model finds."
+    },
+    {
+      "id": "d31",
+      "text": "Gradient descent updates model parameters in the direction opposite the gradient of the loss, scaled by a learning rate."
+    },
+    {
+      "id": "d32",
+      "text": "Cross-validation splits data into k folds, training on k-1 folds and validating on the held-out fold, to estimate generalization error."
+    },
+    {
+      "id": "d33",
+      "text": "SQL injection occurs when untrusted input is concatenated into a query string; parameterized queries prevent it by separating code from data."
+    },
+    {
+      "id": "d34",
+      "text": "Cross-site scripting (XSS) injects malicious scripts into pages viewed by other users; output encoding and a content security policy mitigate it."
+    },
+    {
+      "id": "d35",
+      "text": "bcrypt is a deliberately slow password hashing function with a per-password salt and a tunable cost factor."
+    },
+    {
+      "id": "d36",
+      "text": "OAuth 2.0 lets an application obtain limited access to a user's account on another service through access tokens without sharing the user's password."
+    },
+    {
+      "id": "d37",
+      "text": "Double-entry bookkeeping records every transaction as equal debits and credits across accounts, so the books always balance."
+    },
+    {
+      "id": "d38",
+      "text": "A balance sheet reports a company's assets, liabilities and shareholder equity at a single point in time."
+    },
+    {
+      "id": "d39",
+      "text": "Compound interest is calculated on the initial principal and on the interest already accumulated in earlier periods."
+    },
+    {
+      "id": "d40",
+      "text": "The Sharpe ratio measures excess return per unit of volatility, used to compare risk-adjusted performance of investments."
+    },
+    {
+      "id": "d41",
+      "text": "The CAP theorem states that a distributed data store cannot simultaneously guarantee consistency, availability and partition tolerance; during a partition it must trade the first two."
+    },
+    {
+      "id": "d42",
+      "text": "Database sharding splits a large dataset across multiple servers by a shard key, increasing capacity but complicating cross-shard queries."
+    },
+    {
+      "id": "d43",
+      "text": "Redis is an in-memory key-value store often used as a cache, with optional persistence to disk."
+    },
+    {
+      "id": "d44",
+      "text": "A database transaction with ACID properties is atomic, consistent, isolated and durable, so partial failures leave no half-written state."
+    },
+    {
+      "id": "d45",
+      "text": "BM25 ranks documents by term frequency and inverse document frequency with length normalization, rewarding exact keyword matches."
+    },
+    {
+      "id": "d46",
+      "text": "Dense retrieval encodes queries and documents into vectors and ranks by cosine similarity, which captures meaning even when no words overlap."
+    },
+    {
+      "id": "d47",
+      "text": "Reciprocal Rank Fusion merges several ranked lists by summing 1/(k+rank) for each document, requiring no score normalization."
+    },
+    {
+      "id": "d48",
+      "text": "A cross-encoder reranker reads the query and a candidate passage together and outputs a relevance score, which is more accurate but slower than a bi-encoder."
+    }
+  ],
+  "queries": [
+    {
+      "id": "q01",
+      "text": "How does autovacuum reclaim space from dead tuples?",
+      "type": "lexical",
+      "relevant": [
+        "d01"
+      ]
+    },
+    {
+      "id": "q02",
+      "text": "How can I see how long each step of a query actually took, rather than the planner's estimate?",
+      "type": "paraphrase",
+      "relevant": [
+        "d04"
+      ]
+    },
+    {
+      "id": "q03",
+      "text": "What is the difference between a liveness probe and a readiness probe?",
+      "type": "lexical",
+      "relevant": [
+        "d08"
+      ]
+    },
+    {
+      "id": "q04",
+      "text": "What gives a stable address to a group of pods that keep getting replaced?",
+      "type": "paraphrase",
+      "relevant": [
+        "d06"
+      ]
+    },
+    {
+      "id": "q05",
+      "text": "Which git command uses binary search to find the commit that introduced a bug?",
+      "type": "lexical",
+      "relevant": [
+        "d10"
+      ]
+    },
+    {
+      "id": "q06",
+      "text": "How do I temporarily put aside my unfinished edits so I can switch tasks?",
+      "type": "paraphrase",
+      "relevant": [
+        "d11"
+      ]
+    },
+    {
+      "id": "q07",
+      "text": "Which segments are exchanged in the TCP three-way handshake?",
+      "type": "lexical",
+      "relevant": [
+        "d13"
+      ]
+    },
+    {
+      "id": "q08",
+      "text": "Why is a protocol that never retransmits lost packets a good fit for live video?",
+      "type": "paraphrase",
+      "relevant": [
+        "d14"
+      ]
+    },
+    {
+      "id": "q09",
+      "text": "What does the Python GIL prevent threads from doing?",
+      "type": "lexical",
+      "relevant": [
+        "d17"
+      ]
+    },
+    {
+      "id": "q10",
+      "text": "How can I loop over a very large sequence without holding all of it in memory?",
+      "type": "paraphrase",
+      "relevant": [
+        "d18"
+      ]
+    },
+    {
+      "id": "q11",
+      "text": "How does a multi-stage Docker build reduce the final image size?",
+      "type": "lexical",
+      "relevant": [
+        "d21"
+      ]
+    },
+    {
+      "id": "q12",
+      "text": "How do I keep my database files after the container is deleted?",
+      "type": "paraphrase",
+      "relevant": [
+        "d22"
+      ]
+    },
+    {
+      "id": "q13",
+      "text": "What does HTTP status 429 mean and what does the Retry-After header do?",
+      "type": "lexical",
+      "relevant": [
+        "d25"
+      ]
+    },
+    {
+      "id": "q14",
+      "text": "Is it safe to automatically retry a request that might have been delivered twice?",
+      "type": "paraphrase",
+      "relevant": [
+        "d28"
+      ]
+    },
+    {
+      "id": "q15",
+      "text": "What is the difference between precision and recall?",
+      "type": "lexical",
+      "relevant": [
+        "d30"
+      ]
+    },
+    {
+      "id": "q16",
+      "text": "My model scores perfectly on training data but badly on new data. What is happening?",
+      "type": "paraphrase",
+      "relevant": [
+        "d29"
+      ]
+    },
+    {
+      "id": "q17",
+      "text": "How do parameterized queries prevent SQL injection?",
+      "type": "lexical",
+      "relevant": [
+        "d33"
+      ]
+    },
+    {
+      "id": "q18",
+      "text": "Which password storage algorithm is intentionally slow to resist brute-force cracking?",
+      "type": "paraphrase",
+      "relevant": [
+        "d35"
+      ]
+    },
+    {
+      "id": "q19",
+      "text": "What does the Sharpe ratio measure?",
+      "type": "lexical",
+      "relevant": [
+        "d40"
+      ]
+    },
+    {
+      "id": "q20",
+      "text": "Why do the totals on both sides of the ledger always agree after each posting?",
+      "type": "paraphrase",
+      "relevant": [
+        "d37"
+      ]
+    },
+    {
+      "id": "q21",
+      "text": "What does the CAP theorem say about consistency and availability during a partition?",
+      "type": "lexical",
+      "relevant": [
+        "d41"
+      ]
+    },
+    {
+      "id": "q22",
+      "text": "How can I spread one very large table across many servers?",
+      "type": "paraphrase",
+      "relevant": [
+        "d42"
+      ]
+    },
+    {
+      "id": "q23",
+      "text": "How is a cross-encoder reranker different from a bi-encoder in accuracy and speed?",
+      "type": "lexical",
+      "relevant": [
+        "d48"
+      ]
+    },
+    {
+      "id": "q24",
+      "text": "Which retrieval approach can still find a match when the question and the document share no words?",
+      "type": "paraphrase",
+      "relevant": [
+        "d46"
+      ]
+    },
+    {
+      "id": "q25",
+      "text": "Which git operations let me move or replay commits onto a different branch?",
+      "type": "paraphrase",
+      "relevant": [
+        "d09",
+        "d12"
+      ]
+    },
+    {
+      "id": "q26",
+      "text": "How do I defend a web application against attackers injecting malicious input?",
+      "type": "paraphrase",
+      "relevant": [
+        "d33",
+        "d34"
+      ]
+    },
+    {
+      "id": "q27",
+      "text": "How does reciprocal rank fusion combine ranked lists without normalizing scores?",
+      "type": "lexical",
+      "relevant": [
+        "d47"
+      ]
+    },
+    {
+      "id": "q28",
+      "text": "What in-memory store is commonly put in front of a database to speed up reads?",
+      "type": "paraphrase",
+      "relevant": [
+        "d43"
+      ]
+    }
+  ]
+}
