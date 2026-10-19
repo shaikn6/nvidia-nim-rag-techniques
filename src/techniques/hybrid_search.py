@@ -6,6 +6,7 @@ RRF(d) = sum(1 / (k + rank_i(d))) where k=60 is the RRF constant.
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from typing import Any
 
@@ -25,6 +26,11 @@ class HybridSearchResult:
 def _doc_key(doc: Document) -> tuple[Any, str]:
     """Stable document identity for fusion/lookup: (source metadata, page_content)."""
     return (doc.metadata.get("source"), doc.page_content)
+
+
+def _tokenize(text: str) -> list[str]:
+    """Lowercase word tokens; unlike str.split, punctuation does not stay glued to words."""
+    return re.findall(r"\w+", text.lower())
 
 
 def reciprocal_rank_fusion(
@@ -68,13 +74,13 @@ class HybridRetriever:
         self._top_k = top_k
         self._rrf_k = rrf_k
 
-        tokenized = [doc.page_content.lower().split() for doc in docs]
+        tokenized = [_tokenize(doc.page_content) for doc in docs]
         self._bm25 = BM25Okapi(tokenized)
 
     def retrieve(self, query: str) -> list[HybridSearchResult]:
         dense_docs = self._vector_store.similarity_search(query, k=self._top_k * 2)
 
-        tokens = query.lower().split()
+        tokens = _tokenize(query)
         bm25_scores = self._bm25.get_scores(tokens)
         sparse_ranked = [
             self._docs[i] for i in sorted(range(len(bm25_scores)), key=lambda x: -bm25_scores[x])
