@@ -143,7 +143,7 @@ Measured (28 queries, k = number of returned passages considered):
 | Pipeline | recall@1 | recall@3 | recall@5 | MRR@5 |
 |----------|---------:|---------:|---------:|------:|
 | naive baseline (dense) | 0.857 | 1.000 | 1.000 | 0.946 |
-| hybrid search (BM25 + dense, RRF) | 0.893 | 0.946 | 1.000 | 0.955 |
+| hybrid search (BM25 + dense, RRF) | 0.893 | 1.000 | 1.000 | 0.964 |
 | cross-encoder reranking | 0.964 | 1.000 | 1.000 | 1.000 |
 | compression (embeddings filter) | 0.857 | 1.000 | 1.000 | 0.946 |
 
@@ -154,10 +154,13 @@ Reading it honestly:
   recall@1 tops out at 0.964 because two queries have two gold passages.
 - **Reranking** put the gold passage first on every query that has one gold passage.
   Its edge is on the `paraphrase` queries (recall@1 0.933 vs 0.733 for dense).
-- **Hybrid search** helped recall@1 slightly (0.893 vs 0.857) but lost on recall@3
-  (0.946 vs 1.000): on two paraphrase queries BM25 pushed a gold passage down to rank 4-5.
-  On `lexical` queries every pipeline is already at 1.000. The BM25 tokenizer here is
-  `lower().split()`, so punctuation stays attached to words.
+- **Hybrid search** helped recall@1 slightly (0.893 vs 0.857) and ties the dense baseline on
+  recall@3 (1.000). Earlier it lost recall@3 (0.946): the BM25 tokenizer was
+  `lower().split()`, which leaves punctuation attached ("probes," does not match "probes"),
+  and on two paraphrase queries BM25 pushed a gold passage down to rank 4-5. Tokenizing on
+  `\w+` removed that loss (recall@3 0.946 -> 1.000, MRR@5 0.955 -> 0.964, same dataset and
+  models; the tokenizer was the only change between the two runs). On `lexical` queries every pipeline is already at 1.000. With 28 queries this
+  is a two-query difference, not a statistically meaningful gain.
 - **Compression** does not change which passages are retrieved or their order, so its
   ranking metrics equal the naive baseline by construction; its benefit is shorter context.
 - **Not measured:** `query_rewriting_*` (HyDE, multi-query, step-back) and `corrective_rag`

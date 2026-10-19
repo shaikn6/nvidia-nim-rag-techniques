@@ -9,6 +9,7 @@ from langchain_core.documents import Document
 
 from src.techniques.hybrid_search import (
     HybridSearchResult,
+    _tokenize,
     reciprocal_rank_fusion,
     run_hybrid_rag,
 )
@@ -55,6 +56,14 @@ class TestRRF:
         assert len(result) == 2
 
 
+class TestTokenize:
+    def test_punctuation_not_glued_to_words(self):
+        assert _tokenize("Use EXPLAIN, ANALYZE (BUFFERS).") == ["use", "explain", "analyze", "buffers"]
+
+    def test_keeps_identifiers_with_underscores_and_digits(self):
+        assert _tokenize("max_connections=100") == ["max_connections", "100"]
+
+
 class TestHybridRetriever:
     @pytest.fixture()
     def retriever(self, mock_vector_store, sample_docs):
@@ -82,6 +91,23 @@ class TestHybridRetriever:
 
             with pytest.raises(ImportError, match="rank-bm25"):
                 mod.HybridRetriever(mock_vector_store, sample_docs)
+
+    def test_sparse_side_matches_term_followed_by_punctuation(self):
+        """Real BM25 (not mocked): "probes," in the doc must match the query word "probes"."""
+        from langchain_core.vectorstores import VectorStore
+
+        docs = [
+            Document(page_content="Autovacuum reclaims dead tuples.", metadata={"source": "b"}),
+            Document(page_content="Binary search finds a regression.", metadata={"source": "c"}),
+            Document(page_content="Kubernetes probes, such as liveness and readiness.", metadata={"source": "a"}),
+        ]
+        store = MagicMock(spec=VectorStore)
+        store.similarity_search.return_value = []  # isolate the sparse side
+        from src.techniques.hybrid_search import HybridRetriever
+
+        results = HybridRetriever(store, docs, top_k=1).retrieve("probes")
+        assert results[0].document.metadata["source"] == "a"
+        assert results[0].sparse_rank == 0
 
 
 class TestRunHybridRag:
