@@ -2,10 +2,17 @@
 
 from __future__ import annotations
 
+import os
+import sys
 from unittest.mock import MagicMock
 
 import pytest
 from langchain_core.documents import Document
+
+# On macOS, faiss-cpu and torch each bundle an OpenMP runtime; loading both aborts the
+# process (exit 134) unless this is set before either library is imported.
+if sys.platform == "darwin":
+    os.environ.setdefault("KMP_DUPLICATE_LIB_OK", "TRUE")
 
 
 @pytest.fixture()

@@ -192,10 +192,11 @@ python -m src.pipeline.benchmark
 python -m src.pipeline.retrieval_eval
 ```
 
-> **macOS:** if `pytest` crashes with `Fatal Python error: Aborted` while
-> importing `torch`/`sentence-transformers`, that's a duplicate-OpenMP-runtime
-> conflict between `faiss-cpu` and `torch`, not a repo issue. Work around it
-> with `KMP_DUPLICATE_LIB_OK=TRUE pytest --cov`. CI (Ubuntu) is unaffected.
+> **macOS:** `faiss-cpu` and `torch` each bundle an OpenMP runtime, and loading
+> both can abort Python with `Fatal Python error: Aborted`. `tests/conftest.py`
+> sets `KMP_DUPLICATE_LIB_OK=TRUE` on macOS, so `pytest --cov` runs as is. If
+> another command hits the same error, prefix it with `KMP_DUPLICATE_LIB_OK=TRUE`.
+> CI (Ubuntu) is unaffected.
 
 ## Configuration
 
@@ -214,7 +215,7 @@ LangChain · LangGraph · NVIDIA NIM · FAISS · BM25 (rank-bm25) · sentence-tr
 
 ## Tests
 
-Every technique has an isolated test module under `tests/`, plus a benchmark test — 135 tests, 99% coverage locally (`pytest --cov`). CI runs lint (ruff) and the full suite with a 95% coverage gate.
+Every technique has an isolated test module under `tests/`, plus a benchmark test — 138 tests, 99% coverage locally (`pytest --cov`). CI runs lint (ruff) and the full suite with a 95% coverage gate.
 
 ## License
 
