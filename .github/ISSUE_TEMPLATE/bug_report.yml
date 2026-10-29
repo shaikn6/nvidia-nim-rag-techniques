@@ -1,0 +1,39 @@
+name: Bug report
+description: Something isn't working as documented
+labels: [bug]
+body:
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: What did you run, and what did it do?
+      placeholder: |
+        python -m src.pipeline.benchmark raised ... on the hybrid_search pipeline
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Reproduction
+      description: Minimal command or snippet, or a failing test.
+      render: shell
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Environment
+      description: OS, Python version, commit, and whether a real NVIDIA_NIM_API_KEY was set (or demo mode).
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant output
+      render: text

@@ -1,47 +1,36 @@
 # Contributing
 
-Thank you for your interest in contributing!
+Thanks for taking the time to contribute.
 
-## Getting Started
+## Development setup
 
-1. Fork the repository
-2. Clone your fork: `git clone https://github.com/YOUR_USERNAME/REPO_NAME.git`
-3. Create a feature branch: `git checkout -b feat/your-feature`
-4. Install dependencies (see README.md)
-5. Make your changes
-6. Run tests: `pytest` or `npm test` depending on the stack
-7. Commit with conventional commits: `git commit -m "feat: add X"`
-8. Push and open a Pull Request
+```bash
+python -m venv .venv && source .venv/bin/activate
+pip install -e ".[dev]"
+cp .env.example .env   # NVIDIA_NIM_API_KEY is not needed for the tests or the retrieval eval
 
-## Commit Message Format
-
-```
-<type>: <short description>
-
-Types: feat | fix | docs | refactor | test | chore | perf | ci
+pytest --cov=src --cov-report=term-missing --cov-fail-under=95   # what CI runs
+ruff check src/ tests/ --select E,W,F --ignore E501              # what CI runs
 ```
 
-## Code Standards
+On macOS, `tests/conftest.py` sets `KMP_DUPLICATE_LIB_OK=TRUE` because `faiss-cpu` and `torch` both bundle
+an OpenMP runtime; prefix other commands with it if they abort.
 
-- Python: follow PEP 8, use type hints, run `ruff check`
-- TypeScript: strict mode, no `any`, run `tsc --noEmit`
-- All new features need tests (target 80%+ coverage)
-- No hardcoded secrets — use environment variables
+## Ground rules
 
-## Pull Request Checklist
+- **One logical change per PR.** Keep diffs reviewable.
+- **Tests are not optional.** New behaviour needs a test; bug fixes need a test that fails before the fix.
+  CI fails below 95% line coverage on `src/`.
+- **No network in tests.** Tests use the demo embeddings and stubs; nothing may call NVIDIA NIM.
+- **Retrieval numbers come from the code.** If a change moves the retrieval-quality table, re-run
+  `python -m src.pipeline.retrieval_eval` and update the README from `eval/retrieval_results.json` in the same PR.
+- **No secrets in code.** Keys come from the environment (`.env`, never committed).
 
-- [ ] Tests pass locally
-- [ ] No secrets or credentials in code
-- [ ] README updated if behaviour changed
-- [ ] One focused change per PR
+## Commit messages
 
-## Reporting Issues
+Conventional Commits (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`, `chore:`).
 
-Open a GitHub Issue with:
-- What you expected vs what happened
-- Steps to reproduce
-- Environment (OS, Python/Node version)
+## Reporting bugs / proposing features
 
-## License
-
-By contributing you agree your work is released under this project's [MIT License](LICENSE).
+Use the issue templates. For anything security-related, follow [SECURITY.md](SECURITY.md) instead of opening
+a public issue.

@@ -1,0 +1,22 @@
+name: Feature request
+description: Propose a new technique, metric or change
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: Which retrieval or generation failure does this address, and why does it matter?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: Module, interface, and how it would be scored against the naive baseline.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
