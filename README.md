@@ -1,15 +1,26 @@
-# NVIDIA NIM RAG Techniques
+# nvidia-nim-rag-techniques
 
-[![CI](https://github.com/shaikn6/nvidia-nim-rag-techniques/actions/workflows/ci.yml/badge.svg)](https://github.com/shaikn6/nvidia-nim-rag-techniques/actions)
-[![Python](https://img.shields.io/badge/Python-3.11+-3776AB?logo=python&logoColor=white)](https://python.org)
+[![CI](https://github.com/shaikn6/nvidia-nim-rag-techniques/actions/workflows/ci.yml/badge.svg)](https://github.com/shaikn6/nvidia-nim-rag-techniques/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-[![Lint: ruff](https://img.shields.io/badge/lint-ruff-261230?logo=ruff)](https://github.com/astral-sh/ruff)
-[![Coverage](https://img.shields.io/badge/coverage-99%25-brightgreen.svg)](#tests)
+[![Python 3.11+](https://img.shields.io/badge/Python-3.11%2B-3776AB?logo=python&logoColor=white)](pyproject.toml)
 
+**Five RAG techniques (hybrid search, cross-encoder reranking, query rewriting, context compression and corrective RAG) on [NVIDIA NIM](https://www.nvidia.com/en-us/ai/) with LangChain / LangGraph, each isolated, tested and scored against a naive baseline.**
 
-**Five production-grade RAG optimization techniques, powered by [NVIDIA NIM](https://www.nvidia.com/en-us/ai/) and orchestrated with LangChain / LangGraph.**
+Naive RAG — embed, retrieve top-k, stuff into the prompt — falls over on real corpora: keyword-heavy queries miss, embeddings surface near-duplicates, long contexts bury the answer, and the model has no recourse when retrieval is simply wrong. This repo implements one technique for each failure mode, each isolated, tested, and benchmarkable against a naive baseline.
 
-Naive RAG — embed, retrieve top-k, stuff into the prompt — falls over on real corpora: keyword-heavy queries miss, embeddings surface near-duplicates, long contexts bury the answer, and the model has no recourse when retrieval is simply wrong. This repo implements the five techniques that fix each failure mode, each isolated, tested, and benchmarkable against a naive baseline.
+**At a glance.** Retrieval quality on a small labeled set (28 queries, local `bge-small` embeddings and `bge-reranker-v2-m3`; full table and caveats in [Retrieval quality](#retrieval-quality)):
+
+| Pipeline | recall@1 | MRR@5 |
+|----------|---------:|------:|
+| naive baseline (dense) | 0.857 | 0.946 |
+| hybrid search (BM25 + dense, RRF) | 0.893 | 0.964 |
+| cross-encoder reranking | 0.964 | 1.000 |
+
+The set is tiny and easy, so these differences are a handful of queries, not a statistically meaningful ranking. Query rewriting and corrective RAG need a real LLM and are not scored.
+
+## Why this exists
+
+RAG tutorials usually show one pipeline end to end, which makes it hard to tell which step helps. Here each technique sits behind a common interface with its own tests, so it can be swapped in, timed and scored against the same naive baseline on the same data. It also reports the result as it is: on the small labeled set, reranking moved rank-1 recall the most (0.857 to 0.964), and with 28 queries even that is three queries.
 
 ---
 
@@ -120,6 +131,37 @@ mean something.
 
 ---
 
+## Quickstart
+
+```bash
+git clone https://github.com/shaikn6/nvidia-nim-rag-techniques
+cd nvidia-nim-rag-techniques
+
+python -m venv .venv && source .venv/bin/activate
+pip install -e ".[dev]"
+
+cp .env.example .env   # add your NVIDIA_NIM_API_KEY (not needed for the tests, the demo-mode benchmark or the retrieval eval)
+```
+
+```bash
+# Run the test suite (95%+ coverage gate)
+pytest --cov
+
+# Benchmark latency and error rate of the naive baseline and the five techniques
+python -m src.pipeline.benchmark
+
+# Measure retrieval quality (recall@k, MRR) with local embedding + reranker models
+python -m src.pipeline.retrieval_eval
+```
+
+> **macOS:** `faiss-cpu` and `torch` each bundle an OpenMP runtime, and loading
+> both can abort Python with `Fatal Python error: Aborted`. `tests/conftest.py`
+> sets `KMP_DUPLICATE_LIB_OK=TRUE` on macOS, so `pytest --cov` runs as is. If
+> another command hits the same error, prefix it with `KMP_DUPLICATE_LIB_OK=TRUE`.
+> CI (Ubuntu) is unaffected.
+
+---
+
 ## Retrieval quality
 
 `src/pipeline/retrieval_eval.py` scores each pipeline's ranked `sources` against labeled
@@ -169,35 +211,6 @@ Reading it honestly:
 
 ---
 
-## Quickstart
-
-```bash
-git clone https://github.com/shaikn6/nvidia-nim-rag-techniques
-cd nvidia-nim-rag-techniques
-
-python -m venv .venv && source .venv/bin/activate
-pip install -e ".[dev]"
-
-cp .env.example .env   # add your NVIDIA_NIM_API_KEY
-```
-
-```bash
-# Run the test suite (95%+ coverage gate)
-pytest --cov
-
-# Benchmark latency and error rate of the naive baseline and the five techniques
-python -m src.pipeline.benchmark
-
-# Measure retrieval quality (recall@k, MRR) with local embedding + reranker models
-python -m src.pipeline.retrieval_eval
-```
-
-> **macOS:** `faiss-cpu` and `torch` each bundle an OpenMP runtime, and loading
-> both can abort Python with `Fatal Python error: Aborted`. `tests/conftest.py`
-> sets `KMP_DUPLICATE_LIB_OK=TRUE` on macOS, so `pytest --cov` runs as is. If
-> another command hits the same error, prefix it with `KMP_DUPLICATE_LIB_OK=TRUE`.
-> CI (Ubuntu) is unaffected.
-
 ## Configuration
 
 | Variable | Required | Purpose |
@@ -216,6 +229,13 @@ LangChain · LangGraph · NVIDIA NIM · FAISS · BM25 (rank-bm25) · sentence-tr
 ## Tests
 
 Every technique has an isolated test module under `tests/`, plus a benchmark test — 138 tests, 99% coverage locally (`pytest --cov`). CI runs lint (ruff) and the full suite with a 95% coverage gate.
+
+## What I would improve next
+
+- A larger, independently labeled retrieval set (or a public benchmark such as BEIR) so the differences between techniques can be tested for significance.
+- Score query rewriting and corrective RAG with a real LLM, which the current eval skips.
+- An answer-correctness metric, not only retrieval ranking and latency.
+- One composed pipeline that chains the techniques, measured against each technique on its own.
 
 ## License
 
