@@ -5,8 +5,8 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "nvidia-nim-rag-techniques"
 version = "1.0.0"
-description = "5 production RAG optimization techniques powered by NVIDIA NIM"
-requires-python = ">=3.10"
+description = "Five RAG optimization techniques on NVIDIA NIM, each with tests and an offline benchmark"
+requires-python = ">=3.11"
 dependencies = [
     "langchain>=0.3",
     "langchain-openai>=0.2",
