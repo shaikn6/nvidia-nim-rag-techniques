@@ -12,6 +12,7 @@ from typing import Any
 from langchain_core.documents import Document
 from langchain_core.language_models import BaseChatModel
 from langchain_core.vectorstores import VectorStore
+from src.core.prompting import GENERATE_PROMPT, format_context
 
 
 @dataclass
@@ -82,8 +83,8 @@ def run_reranking_rag(
     llm: BaseChatModel,
 ) -> dict[str, Any]:
     results = retriever.retrieve(query)
-    context = "\n\n".join(r.document.page_content for r in results)
-    prompt = f"Answer the question using only the context below.\n\nContext:\n{context}\n\nQuestion: {query}"
+    context = format_context(r.document.page_content for r in results)
+    prompt = GENERATE_PROMPT.format(context=context, query=query)
     response = llm.invoke(prompt)
     return {
         "answer": response.content,

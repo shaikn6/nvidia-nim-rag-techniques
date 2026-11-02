@@ -15,6 +15,7 @@ from langchain_core.documents import Document
 from langchain_core.embeddings import Embeddings
 from langchain_core.language_models import BaseChatModel
 from langchain_core.vectorstores import VectorStore
+from src.core.prompting import GENERATE_PROMPT, format_context
 
 _HYDE_PROMPT = (
     "Write a brief passage (2-3 sentences) that would directly answer: {query}\n"
@@ -130,8 +131,8 @@ def run_query_rewriting_rag(
             f"Unknown strategy: {strategy!r}. Choose from: hyde, multi_query, step_back"
         )
 
-    context = "\n\n".join(doc.page_content for doc in result.documents)
-    prompt = f"Answer the question using only the context below.\n\nContext:\n{context}\n\nQuestion: {query}"
+    context = format_context(doc.page_content for doc in result.documents)
+    prompt = GENERATE_PROMPT.format(context=context, query=query)
     answer = llm.invoke(prompt).content
 
     return {
