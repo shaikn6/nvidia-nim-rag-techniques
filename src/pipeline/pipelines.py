@@ -24,6 +24,7 @@ from langchain_core.vectorstores import VectorStore
 
 from src.pipeline.base import BaseRAGPipeline
 from src.techniques.compression import CompressionRetriever, run_compression_rag
+from src.core.prompting import format_context
 from src.techniques.corrective_rag import _GENERATE_PROMPT, run_corrective_rag
 from src.techniques.hybrid_search import HybridRetriever, run_hybrid_rag
 from src.techniques.query_rewriting import run_query_rewriting_rag
@@ -44,7 +45,7 @@ class NaiveRAGPipeline(BaseRAGPipeline):
 
     def run(self, query: str) -> dict[str, Any]:
         docs = self._vector_store.similarity_search(query, k=self._top_k)
-        context = "\n\n".join(doc.page_content for doc in docs)
+        context = format_context(doc.page_content for doc in docs)
         prompt = _GENERATE_PROMPT.format(context=context, query=query)
         response = self._llm.invoke(prompt)
         return {

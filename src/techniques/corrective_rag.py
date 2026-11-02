@@ -18,16 +18,15 @@ from langchain_core.documents import Document
 from langchain_core.language_models import BaseChatModel
 from langchain_core.vectorstores import VectorStore
 
+from src.core.prompting import GENERATE_PROMPT as _GENERATE_PROMPT
+from src.core.prompting import format_context
+
 logger = logging.getLogger(__name__)
 
 _GRADE_PROMPT = (
     "Is the following document relevant to the question?\n\n"
     "Question: {query}\n\nDocument:\n{doc}\n\n"
     "Answer with exactly one word: yes or no."
-)
-
-_GENERATE_PROMPT = (
-    "Answer the question using only the context below.\n\nContext:\n{context}\n\nQuestion: {query}"
 )
 
 
@@ -97,7 +96,7 @@ def run_corrective_rag(
             relevant_docs = state.documents
 
     state.steps.append("generate")
-    context = "\n\n".join(doc.page_content for doc in relevant_docs)
+    context = format_context(doc.page_content for doc in relevant_docs)
     response = llm.invoke(_GENERATE_PROMPT.format(context=context, query=query))
     state.answer = response.content
 
@@ -148,7 +147,7 @@ def build_crag_graph(
 
     def generate_node(state: GraphState) -> GraphState:
         relevant = [d for d, ok in state.get("graded", []) if ok] or state["documents"]
-        context = "\n\n".join(d.page_content for d in relevant)
+        context = format_context(d.page_content for d in relevant)
         ans = llm.invoke(_GENERATE_PROMPT.format(context=context, query=state["query"])).content
         return {**state, "answer": ans}
 

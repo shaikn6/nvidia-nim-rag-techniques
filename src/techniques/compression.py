@@ -18,6 +18,7 @@ from langchain_core.documents import Document
 from langchain_core.embeddings import Embeddings
 from langchain_core.language_models import BaseChatModel
 from langchain_core.vectorstores import VectorStore
+from src.core.prompting import GENERATE_PROMPT, format_context
 
 _EXTRACT_PROMPT = (
     "Extract only the sentences from the passage below that are directly relevant "
@@ -137,8 +138,8 @@ def run_compression_rag(
     llm: BaseChatModel,
 ) -> dict[str, Any]:
     compressed_docs = retriever.invoke(query)
-    context = "\n\n".join(doc.page_content for doc in compressed_docs)
-    prompt = f"Answer the question using only the context below.\n\nContext:\n{context}\n\nQuestion: {query}"
+    context = format_context(doc.page_content for doc in compressed_docs)
+    prompt = GENERATE_PROMPT.format(context=context, query=query)
     answer = llm.invoke(prompt).content
     return {
         "answer": answer,
