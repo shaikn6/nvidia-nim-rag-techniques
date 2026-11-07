@@ -2,8 +2,13 @@
 
 The latency benchmark in `benchmark.py` says nothing about whether a technique retrieves
 the right passages. This module scores each pipeline's ranked `sources` against the
-qrels in `eval/data/tiny_ir.json`. Only retrieval is scored: the generation step is a
-no-op stub, so no LLM (and no NVIDIA NIM key) is needed.
+qrels in `eval/data/tiny_ir.json`, and reports an `answer_overlap_proxy` for the
+generated answer alongside them (see `answer_eval.py`). Generation runs the bundled
+deterministic `DemoLLM`, so no NVIDIA NIM key is needed and the eval stays offline.
+
+`answer_overlap_proxy` is a lexical PROXY, not true answer-correctness: because the demo
+generator is extractive, the number mostly reflects whether the correct passage reached
+the context. Read `answer_eval.py` for exactly what it does and does not measure.
 
 Run with `python -m src.pipeline.retrieval_eval` to embed with a local open model
 (BAAI/bge-small-en-v1.5), rerank with the repo's default cross-encoder, and write
@@ -14,16 +19,17 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from types import SimpleNamespace
 from typing import Any
 
 from langchain_core.documents import Document
 from langchain_core.embeddings import Embeddings
 
 from src.core.vector_store import build_faiss_store
+from src.pipeline.answer_eval import answer_overlap_proxy
 from src.pipeline.base import BaseRAGPipeline
 from src.pipeline.pipelines import (
     CompressionPipeline,
+    DemoLLM,
     HybridSearchPipeline,
     NaiveRAGPipeline,
     RerankingPipeline,
@@ -48,13 +54,6 @@ SKIPPED = {
     "query_rewriting_step_back": "Retrieves with an LLM-generated step-back question; needs a real LLM.",
     "corrective_rag": "LLM grades retrieved docs and falls back to Tavily web search (not a corpus ranking).",
 }
-
-
-class RetrievalOnlyLLM:
-    """Generation stub: the pipelines call `invoke` after retrieval, but only `sources` is scored."""
-
-    def invoke(self, prompt: str) -> SimpleNamespace:
-        return SimpleNamespace(content="")
 
 
 class SentenceTransformerEmbeddings(Embeddings):
@@ -87,8 +86,7 @@ def reciprocal_rank(ranked_ids: list[str], relevant: set[str]) -> float:
     return 0.0
 
 
-def _ranked_ids(pipeline: BaseRAGPipeline, query: str) -> list[str]:
-    ids = [src["source"] for src in pipeline.run(query)["sources"]]
+def _dedup(ids: list[str]) -> list[str]:
     return list(dict.fromkeys(ids))  # a doc counts once, at its best rank
 
 
@@ -100,13 +98,22 @@ def _aggregate(rows: list[dict[str, float]]) -> dict[str, float]:
     return {key: round(_mean([r[key] for r in rows]), 4) for key in rows[0]}
 
 
-def evaluate_pipeline(pipeline: BaseRAGPipeline, queries: list[dict[str, Any]]) -> dict[str, Any]:
+def evaluate_pipeline(
+    pipeline: BaseRAGPipeline,
+    queries: list[dict[str, Any]],
+    id_to_text: dict[str, str],
+) -> dict[str, Any]:
     per_query: list[tuple[str, dict[str, float]]] = []
     for q in queries:
-        ranked = _ranked_ids(pipeline, q["text"])
+        result = pipeline.run(q["text"])
+        ranked = _dedup([src["source"] for src in result["sources"]])
         relevant = set(q["relevant"])
+        gold = " ".join(id_to_text[doc_id] for doc_id in q["relevant"])
         scores = {f"recall@{k}": recall_at_k(ranked, relevant, k) for k in KS}
         scores["mrr"] = reciprocal_rank(ranked, relevant)
+        # Lexical overlap of the generated answer with the gold passage(s). A proxy,
+        # not true correctness; see answer_eval.answer_overlap_proxy.
+        scores["answer_overlap_proxy"] = answer_overlap_proxy(result.get("answer", ""), gold)
         per_query.append((q["type"], scores))
 
     result: dict[str, Any] = _aggregate([s for _, s in per_query])
@@ -119,8 +126,13 @@ def evaluate_pipeline(pipeline: BaseRAGPipeline, queries: list[dict[str, Any]]) 
 
 
 def build_pipelines(docs: list[Document], embeddings: Embeddings, reranker: Any) -> list[BaseRAGPipeline]:
-    """The pipelines whose retrieval step runs without an LLM, all over one shared index."""
-    llm = RetrievalOnlyLLM()
+    """The pipelines whose retrieval step runs without an LLM, all over one shared index.
+
+    Generation uses the deterministic, offline `DemoLLM` so the answer-overlap proxy has
+    an answer to score; the LLM choice never affects `sources`, so recall@k/MRR are
+    unchanged.
+    """
+    llm = DemoLLM()
     store = build_faiss_store(docs, embeddings)
     return [
         NaiveRAGPipeline(store, llm),
@@ -137,10 +149,11 @@ def run_eval(
     reranker: Any,
 ) -> dict[str, Any]:
     pipelines = build_pipelines(docs, embeddings, reranker)
+    id_to_text = {d.metadata["source"]: d.page_content for d in docs}
     return {
         "num_passages": len(docs),
         "num_queries": len(queries),
-        "pipelines": {p.name: evaluate_pipeline(p, queries) for p in pipelines},
+        "pipelines": {p.name: evaluate_pipeline(p, queries, id_to_text) for p in pipelines},
         "skipped": SKIPPED,
     }
 
@@ -168,10 +181,16 @@ def main() -> None:  # pragma: no cover - loads real models; exercised by runnin
     RESULTS_PATH.write_text(json.dumps(results, indent=2) + "\n")
 
     print(f"{len(docs)} passages, {len(queries)} queries -> {RESULTS_PATH.relative_to(_REPO_ROOT)}\n")
-    header = f"{'pipeline':>16}  " + "  ".join(f"recall@{k}" for k in KS) + "     mrr"
+    header = f"{'pipeline':>16}  " + "  ".join(f"recall@{k}" for k in KS) + "     mrr  ans_overlap*"
     print(header)
     for name, m in results["pipelines"].items():
-        print(f"{name:>16}  " + "  ".join(f"{m[f'recall@{k}']:8.3f}" for k in KS) + f"  {m['mrr']:6.3f}")
+        print(
+            f"{name:>16}  "
+            + "  ".join(f"{m[f'recall@{k}']:8.3f}" for k in KS)
+            + f"  {m['mrr']:6.3f}  {m['answer_overlap_proxy']:11.3f}"
+        )
+    print("\n* answer_overlap_proxy: lexical overlap of the answer with the gold passage(s), "
+          "a proxy, not true answer-correctness (see src/pipeline/answer_eval.py).")
 
 
 if __name__ == "__main__":  # pragma: no cover
