@@ -11,7 +11,6 @@ from src.pipeline.retrieval_eval import (
     DATASET_PATH,
     KS,
     SKIPPED,
-    RetrievalOnlyLLM,
     SentenceTransformerEmbeddings,
     load_dataset,
     recall_at_k,
@@ -62,6 +61,11 @@ def test_eval_runs_on_tiny_set_with_sane_metrics():
         assert sum(t["num_queries"] for t in metrics["by_query_type"].values()) == len(queries)
         # hashed bag-of-words still finds something on a lexically easy set
         assert metrics["recall@5"] > 0.0
+        # answer-overlap proxy is computed, in range, and non-trivial on this set
+        assert 0.0 < metrics["answer_overlap_proxy"] <= 1.0
+        assert all(
+            0.0 <= t["answer_overlap_proxy"] <= 1.0 for t in metrics["by_query_type"].values()
+        )
 
 
 def test_sentence_transformer_embeddings_adapter():
@@ -73,8 +77,4 @@ def test_sentence_transformer_embeddings_adapter():
     emb = SentenceTransformerEmbeddings(FakeModel())
     assert emb.embed_documents(["ab", "abc"]) == [[2.0, 1.0], [3.0, 1.0]]
     assert emb.embed_query("abcd") == [4.0, 1.0]
-
-
-def test_stub_llm_returns_empty_content():
-    assert RetrievalOnlyLLM().invoke("anything").content == ""
 
