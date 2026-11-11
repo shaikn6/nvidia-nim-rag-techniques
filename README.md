@@ -97,9 +97,10 @@ flowchart TD
   `BenchmarkReport.summary()` aggregates `avg_latency_ms`, `error_rate`, and
   `query_count` per technique, so latency and failure rate are measured against the
   naive baseline rather than asserted. This latency benchmark does **not** measure
-  retrieval or answer quality; retrieval quality (recall@k, MRR) is measured separately
-  on a small labeled set, see [Retrieval quality](#retrieval-quality) below. There is
-  still no answer-correctness metric. Absolute latency numbers depend on your NIM
+  retrieval or answer quality; retrieval quality (recall@k, MRR) and a lexical
+  answer-overlap proxy are measured separately on a small labeled set, see
+  [Retrieval quality](#retrieval-quality) below. The answer metric is an explicit
+  **proxy**, not true answer-correctness. Absolute latency numbers depend on your NIM
   endpoint, corpus, and query set — run it on yours.
 
 ### Example output
@@ -209,6 +210,23 @@ Reading it honestly:
   need a real LLM (and Tavily for the CRAG fallback), so they are skipped rather than scored
   with a stub. Per-query-type breakdowns are in `eval/retrieval_results.json`.
 
+### Answer-overlap proxy (not answer-correctness)
+
+The eval also reports `answer_overlap_proxy` per pipeline, in `eval/retrieval_results.json`
+and the printed table (`src/pipeline/answer_eval.py`). It is the fraction of the gold
+passage's content words (lowercased `\w+` tokens, minus common stopwords) that also appear
+in the generated answer — pure lexical overlap, computed with no live LLM call so it stays
+deterministic and CI-safe.
+
+It is a **proxy**, deliberately labeled as one, not a true answer-correctness metric. It
+cannot tell a correct paraphrase (which may reuse none of the reference's words, scoring
+low) from a fluent but wrong answer (which may reuse them, scoring high), and it measures
+nothing an LLM-as-judge or entailment model would catch. Because the offline `DemoLLM`
+generator is extractive — its answer is a slice of the retrieved context — the proxy here
+mostly reflects whether the correct passage reached the context, so in practice it tracks
+retrieval quality rather than independently measuring the answer. Read it as a coarse
+grounding signal only.
+
 ---
 
 ## Configuration
@@ -228,13 +246,13 @@ LangChain · LangGraph · NVIDIA NIM · FAISS · BM25 (rank-bm25) · sentence-tr
 
 ## Tests
 
-Every technique has an isolated test module under `tests/`, plus a benchmark test — 138 tests, 99% coverage locally (`pytest --cov`). CI runs lint (ruff) and the full suite with a 95% coverage gate.
+Every technique has an isolated test module under `tests/`, plus a benchmark test — 147 tests, 99% coverage locally (`pytest --cov`). CI runs lint (ruff) and the full suite with a 95% coverage gate.
 
 ## What I would improve next
 
 - A larger, independently labeled retrieval set (or a public benchmark such as BEIR) so the differences between techniques can be tested for significance.
 - Score query rewriting and corrective RAG with a real LLM, which the current eval skips.
-- An answer-correctness metric, not only retrieval ranking and latency.
+- A true answer-correctness metric (LLM-as-judge or entailment), beyond the current lexical answer-overlap proxy, which only approximates grounding.
 - One composed pipeline that chains the techniques, measured against each technique on its own.
 
 ## License
