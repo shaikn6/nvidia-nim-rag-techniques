@@ -1,5 +1,7 @@
 # nvidia-nim-rag-techniques
 
+> **Five production RAG techniques on NVIDIA NIM, each measured so you can see which one actually earns its place.**
+
 [![CI](https://github.com/shaikn6/nvidia-nim-rag-techniques/actions/workflows/ci.yml/badge.svg)](https://github.com/shaikn6/nvidia-nim-rag-techniques/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Python 3.11+](https://img.shields.io/badge/Python-3.11%2B-3776AB?logo=python&logoColor=white)](pyproject.toml)
