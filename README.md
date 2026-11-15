@@ -20,6 +20,12 @@ Naive RAG — embed, retrieve top-k, stuff into the prompt — falls over on rea
 
 The set is tiny and easy, so these differences are a handful of queries, not a statistically meaningful ranking. Query rewriting and corrective RAG need a real LLM and are not scored.
 
+**Reproduce this table** (no API key needed, uses local open models):
+
+```bash
+pip install -e ".[dev]" && python -m src.pipeline.retrieval_eval   # writes eval/retrieval_results.json
+```
+
 ## Why this exists
 
 RAG tutorials usually show one pipeline end to end, which makes it hard to tell which step helps. Here each technique sits behind a common interface with its own tests, so it can be swapped in, timed and scored against the same naive baseline on the same data. It also reports the result as it is: on the small labeled set, reranking moved rank-1 recall the most (0.857 to 0.964), and with 28 queries even that is three queries.
@@ -248,7 +254,17 @@ LangChain · LangGraph · NVIDIA NIM · FAISS · BM25 (rank-bm25) · sentence-tr
 
 ## Tests
 
-Every technique has an isolated test module under `tests/`, plus a benchmark test — 147 tests, 99% coverage locally (`pytest --cov`). CI runs lint (ruff) and the full suite with a 95% coverage gate.
+Every technique has an isolated test module under `tests/`, plus a benchmark test — 150 tests, 99% coverage locally (`pytest --cov`). CI runs lint (ruff) and the full suite with a 95% coverage gate.
+
+## Limitations
+
+Read the numbers in this repo with these caveats; they are stated plainly rather than buried.
+
+- **The labeled set is tiny and easy (28 queries, 48 passages).** Dense retrieval already finds every gold passage in the top 3, so the gaps between techniques are a handful of queries, not a statistically significant ranking. Treat the table as a worked example of the measurement method, not a verdict on which technique is best.
+- **Only three of the five techniques are scored.** Query rewriting and corrective RAG retrieve with a real LLM (and Tavily for the CRAG fallback), so scoring them with an offline stub would be meaningless; they are reported as skipped, not given a number.
+- **`answer_overlap_proxy` is a proxy, not answer-correctness.** It is lexical overlap with the gold passage and, with the extractive demo generator, mostly reflects whether the right passage reached the context. It cannot tell a correct paraphrase from a fluent wrong answer. Read it as a coarse grounding signal only.
+- **The benchmark measures latency and error rate, not quality**, and its printed numbers are demo-mode timings (in-memory stand-ins, not real NIM inference). They vary run to run and are a harness sanity check, not a performance claim.
+- **Absolute numbers depend on your NIM endpoint, corpus and query set.** Run the eval and benchmark on yours for numbers that mean something to you.
 
 ## What I would improve next
 

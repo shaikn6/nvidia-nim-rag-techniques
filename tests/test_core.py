@@ -93,3 +93,36 @@ class TestBuildVectorStore:
 
             with pytest.raises(KeyError):
                 build_pinecone_store(sample_docs, mock_embeddings)
+
+    @pytest.mark.parametrize(
+        "index_name, env_index, expected_index",
+        [
+            (None, None, "nim-rag"),          # default when neither arg nor env is set
+            (None, "from-env", "from-env"),   # PINECONE_INDEX env wins over the default
+            ("explicit", "from-env", "explicit"),  # explicit arg wins over env
+        ],
+    )
+    def test_build_pinecone_store_constructs_index(
+        self, sample_docs, mock_embeddings, monkeypatch, index_name, env_index, expected_index
+    ):
+        monkeypatch.setenv("PINECONE_API_KEY", "pk-test")
+        if env_index is None:
+            monkeypatch.delenv("PINECONE_INDEX", raising=False)
+        else:
+            monkeypatch.setenv("PINECONE_INDEX", env_index)
+
+        mock_pc_module = MagicMock()
+        sentinel_store = MagicMock()
+        mock_pc_module.PineconeVectorStore.from_documents.return_value = sentinel_store
+        with patch.dict("sys.modules", {"langchain_pinecone": mock_pc_module}):
+            from src.core.vector_store import build_pinecone_store
+
+            store = build_pinecone_store(sample_docs, mock_embeddings, index_name=index_name)
+
+        assert store is sentinel_store
+        mock_pc_module.PineconeVectorStore.from_documents.assert_called_once_with(
+            sample_docs,
+            mock_embeddings,
+            index_name=expected_index,
+            pinecone_api_key="pk-test",
+        )
