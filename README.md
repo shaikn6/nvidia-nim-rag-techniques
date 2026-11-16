@@ -235,13 +235,18 @@ mostly reflects whether the correct passage reached the context, so in practice 
 retrieval quality rather than independently measuring the answer. Read it as a coarse
 grounding signal only.
 
+Measured on the same 28 queries (`eval/retrieval_results.json`): naive baseline 0.884, hybrid
+search 0.910, reranking 0.960, compression 0.875. The order follows recall@1, as expected from
+an extractive generator; compression scores slightly below the baseline, most likely because it
+trims sentences from the context the answer is sliced from (not separately tested).
+
 ---
 
 ## Configuration
 
 | Variable | Required | Purpose |
 |----------|----------|---------|
-| `NVIDIA_NIM_API_KEY` | ✅ | NVIDIA NIM inference + embeddings |
+| `NVIDIA_NIM_API_KEY` | for live NIM calls only | NVIDIA NIM inference + embeddings (tests, demo benchmark and retrieval eval run without it) |
 | `NVIDIA_NIM_BASE_URL` | optional | NIM endpoint (default `integrate.api.nvidia.com/v1`) |
 | `PINECONE_API_KEY` / `PINECONE_INDEX` | optional | Pinecone vector store (FAISS is default) |
 | `TAVILY_API_KEY` | optional | Web-search fallback for Corrective RAG |
